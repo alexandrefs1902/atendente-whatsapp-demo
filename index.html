@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oficina São Jorge</title>
+<meta name="description" content="Demonstração de atendimento automático por mensagem para uma oficina mecânica: responde preço, horário e agendamento na hora.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: uma tela de conversa, estilo app de mensagem, para abrir no celular e testar. */
+:root{
+  --fundo:#e9e3d8; --barra:#1f6b5a; --barra-txt:#f3fbf7;
+  --bolha-cli:#d6f3c4; --bolha-cli-txt:#132015;
+  --bolha-bot:#ffffff; --bolha-bot-txt:#15201b;
+  --hora:#6b7a72; --chip-bg:#ffffff; --chip-br:#c9d3cc; --chip-txt:#1f6b5a;
+  --barra-in:#f4f1ea; --input-bg:#ffffff; --input-br:#cfd6cf; --tinta:#15201b;
+  --acento:#1f6b5a; --sel:#128C7E;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --fundo:#0c1512; --barra:#1b4b40; --barra-txt:#eaf4ef;
+  --bolha-cli:#204d2f; --bolha-cli-txt:#e4f6dc;
+  --bolha-bot:#1a2520; --bolha-bot-txt:#e6ede8;
+  --hora:#8aa096; --chip-bg:#162019; --chip-br:#2c3c33; --chip-txt:#7fd3b8;
+  --barra-in:#111b16; --input-bg:#1a2520; --input-br:#2c3c33; --tinta:#e6ede8;
+  --acento:#5ec6a8; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --fundo:#0c1512; --barra:#1b4b40; --barra-txt:#eaf4ef;
+  --bolha-cli:#204d2f; --bolha-cli-txt:#e4f6dc;
+  --bolha-bot:#1a2520; --bolha-bot-txt:#e6ede8;
+  --hora:#8aa096; --chip-bg:#162019; --chip-br:#2c3c33; --chip-txt:#7fd3b8;
+  --barra-in:#111b16; --input-bg:#1a2520; --input-br:#2c3c33; --tinta:#e6ede8;
+  --acento:#5ec6a8; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#2a2f2c;font-family:Inter,system-ui,sans-serif;color:var(--tinta);
+  display:flex;align-items:center;justify-content:center}
+.phone{width:100%;max-width:440px;height:100%;max-height:860px;display:flex;flex-direction:column;
+  background:var(--fundo);position:relative;overflow:hidden}
+@media(min-width:460px){.phone{border-radius:14px;height:92vh;box-shadow:0 18px 50px rgba(0,0,0,.4)}}
+
+/* cabeçalho */
+.top{background:var(--barra);color:var(--barra-txt);padding:10px max(14px,env(safe-area-inset-left,0)) 10px max(14px,env(safe-area-inset-right,0));
+  padding-top:max(10px,env(safe-area-inset-top,0));display:flex;align-items:center;gap:11px;flex:none;z-index:2}
+.av{width:42px;height:42px;border-radius:50%;background:#f2c230;color:#15201b;display:grid;place-items:center;
+  font-weight:700;font-size:17px;flex:none}
+.top .nm{font-weight:600;font-size:16px;line-height:1.15}
+.top .st{font-size:12px;opacity:.85;display:flex;align-items:center;gap:5px}
+.top .st::before{content:"";width:7px;height:7px;border-radius:50%;background:#7dffb0}
+.demo-tag{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.04em;background:rgba(255,255,255,.18);
+  padding:4px 9px;border-radius:999px;white-space:nowrap}
+
+/* mensagens */
+.msgs{flex:1;overflow-y:auto;padding:16px max(12px,env(safe-area-inset-left,0)) 6px max(12px,env(safe-area-inset-right,0));
+  display:flex;flex-direction:column;gap:8px;background-image:radial-gradient(rgba(0,0,0,.025) 1px,transparent 0);background-size:22px 22px}
+.row{display:flex;max-width:84%}
+.row.cli{align-self:flex-end;justify-content:flex-end}
+.row.bot{align-self:flex-start}
+.b{padding:8px 11px 6px;border-radius:12px;font-size:14.5px;line-height:1.42;position:relative;
+  box-shadow:0 1px .5px rgba(0,0,0,.13);white-space:pre-wrap;word-break:break-word;min-width:0}
+.bot .b{background:var(--bolha-bot);color:var(--bolha-bot-txt);border-top-left-radius:3px}
+.cli .b{background:var(--bolha-cli);color:var(--bolha-cli-txt);border-top-right-radius:3px}
+.b .h{font-size:10.5px;color:var(--hora);float:right;margin:4px 0 -2px 10px}
+.b b{font-weight:700}
+.sep{align-self:center;background:rgba(0,0,0,.08);color:var(--hora);font-size:11px;padding:3px 10px;border-radius:8px;margin:4px 0}
+:root[data-theme="dark"] .sep,@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .sep{background:rgba(255,255,255,.08)}}
+
+/* indicador digitando */
+.typing{display:inline-flex;gap:4px;padding:11px 13px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--hora);opacity:.6;animation:bl 1.1s infinite}
+.typing i:nth-child(2){animation-delay:.18s}.typing i:nth-child(3){animation-delay:.36s}
+@keyframes bl{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:.9}}
+@media(prefers-reduced-motion:reduce){.typing i{animation:none}}
+
+/* chips de atalho */
+.chips{display:flex;gap:8px;overflow-x:auto;padding:8px max(12px,env(safe-area-inset-left,0));flex:none;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:var(--chip-bg);border:1px solid var(--chip-br);color:var(--chip-txt);
+  font:600 13px Inter,sans-serif;padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.chip:active{transform:scale(.96)}
+
+/* barra de entrada */
+.bar{display:flex;gap:8px;align-items:center;background:var(--barra-in);flex:none;
+  padding:9px max(10px,env(safe-area-inset-left,0)) calc(9px + env(safe-area-inset-bottom,0)) max(10px,env(safe-area-inset-right,0))}
+.bar input{flex:1;min-width:0;border:1px solid var(--input-br);background:var(--input-bg);color:var(--tinta);
+  border-radius:999px;padding:11px 15px;font:400 15px Inter,sans-serif;outline:none}
+.bar input:focus{border-color:var(--acento)}
+.send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--acento);color:#fff;cursor:pointer;
+  display:grid;place-items:center}
+.send:active{transform:scale(.93)}
+.send svg{width:21px;height:21px}
+a.cta{color:var(--acento);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <header class="top">
+    <div class="av" id="av">SJ</div>
+    <div>
+      <div class="nm" id="nm">Oficina São Jorge</div>
+      <div class="st">online agora</div>
+    </div>
+    <span class="demo-tag">DEMONSTRAÇÃO</span>
+  </header>
+
+  <div class="msgs" id="msgs" aria-live="polite"></div>
+
+  <div class="chips" id="chips"></div>
+
+  <form class="bar" id="form">
+    <input id="in" type="text" autocomplete="off" placeholder="Escreva uma mensagem…" aria-label="Sua mensagem">
+    <button class="send" type="submit" aria-label="Enviar">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 3l18 9-18 9 4-9-4-9zm4.5 9H13"/></svg>
+    </button>
+  </form>
+</div>
+
+<script>
+// ===== Dados da oficina (troque aqui para personalizar por cliente) =====
+const OFICINA = {
+  nome: "Oficina São Jorge", sigla: "SJ",
+  horario: "Seg a sex 8h às 18h, sábado 8h às 12h",
+  endereco: "Rua das Oficinas, 240 — a 2 quadras do metrô"
+};
+
+const msgs = document.getElementById("msgs");
+const now = () => new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
+document.getElementById("nm").textContent = OFICINA.nome;
+document.getElementById("av").textContent = OFICINA.sigla;
+
+function bubble(txt, who){
+  const row=document.createElement("div"); row.className="row "+who;
+  const b=document.createElement("div"); b.className="b";
+  b.innerHTML = txt.replace(/\n/g,"<br>") + '<span class="h">'+now()+'</span>';
+  row.appendChild(b); msgs.appendChild(row); msgs.scrollTop=msgs.scrollHeight;
+}
+function sep(t){const s=document.createElement("div");s.className="sep";s.textContent=t;msgs.appendChild(s);}
+
+let typingEl=null;
+function typing(on){
+  if(on){ const r=document.createElement("div"); r.className="row bot"; r.id="typing";
+    r.innerHTML='<div class="b"><span class="typing"><i></i><i></i><i></i></span></div>';
+    msgs.appendChild(r); typingEl=r; msgs.scrollTop=msgs.scrollHeight; }
+  else if(typingEl){ typingEl.remove(); typingEl=null; }
+}
+
+// ===== Respostas por palavra-chave =====
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const agendar = "Quer que eu já reserve um horário? É só me dizer o dia e a hora que preferir. 📅";
+const regras = [
+  {k:["oleo","troca de oleo","lubrific"], r:"A troca de óleo com filtro sai a partir de <b>R$ 60</b> (mão de obra), leva uns 40 min e já incluo a conferência de fluidos e pneus. Qual o modelo e o ano do carro? Assim te passo o valor certinho.\n\n"+agendar},
+  {k:["pastilha","freio","disco"], r:"Troca de pastilhas dianteiras a partir de <b>R$ 150</b> de mão de obra, com medição do disco antes. Em 1h30 o carro tá pronto. Me diz o modelo que eu confirmo o valor da peça.\n\n"+agendar},
+  {k:["alinhamento","balanceamento","volante trem"], r:"Alinhamento e balanceamento das 4 rodas por <b>R$ 120</b>, com relatório impresso, em cerca de 1h. "+agendar},
+  {k:["revisao","revisão completa","revisar"], r:"Faço revisão completa e te mando o orçamento item por item, com foto de cada ponto, antes de mexer em qualquer coisa. Você aprova só o que quiser. Quer trazer o carro pra avaliação?"},
+  {k:["barulho","nao liga","não liga","nao pega","problema","fumaça","fumaca","luz do painel","scanner","diagnost"], r:"Pelo que você descreveu, o melhor é passar o scanner e olhar de perto. O diagnóstico é <b>R$ 90</b> e, se o conserto for feito aqui, esse valor é abatido do total. "+agendar},
+  {k:["orcamento","orçamento","quanto","preco","preço","valor","custa"], r:"Claro! Me conta o que o carro tá precisando (ou qual o barulho/sintoma) e o modelo e ano, que eu já te passo um valor. Orçamento é sempre por escrito e sem compromisso."},
+  {k:["agendar","marcar","horario para","reserva","agenda"], r:"Perfeito! Me diz o dia e o horário que ficam bons pra você e eu já deixo reservado. "+OFICINA.horario+"."},
+  {k:["horario","que horas","aberto","funciona","fecha","atende"], r:"Nosso horário é <b>"+OFICINA.horario+"</b>. Pode trazer o carro sem agendar, mas se marcar você não pega fila. Quer agendar?"},
+  {k:["onde","endereco","endereço","fica","localiza","chegar","mapa"], r:"Estamos na <b>"+OFICINA.endereco+"</b>. Tem espaço pra deixar o carro na frente enquanto a gente avalia. Quer que eu te mande a localização no mapa?"},
+  {k:["pix","cartao","cartão","pagamento","parcela","pagar","dinheiro"], r:"Aceitamos Pix, dinheiro e cartão em até 3x sem juros. O pagamento é só depois do serviço aprovado e feito. 👍"},
+  {k:["garantia"], r:"Todo serviço tem <b>90 dias de garantia</b> em peça e mão de obra, por escrito na ordem de serviço. Voltou o mesmo problema, a gente refaz sem custo."},
+  {k:["obrigad","valeu","vlw","show","otimo","ótimo","legal"], r:"Imagina, tô aqui pra isso! 😄 Qualquer coisa é só chamar. Quer que eu já deixe um horário reservado pra você?"},
+  {k:["oi","ola","olá","bom dia","boa tarde","boa noite","e ai","eai"], r:"Oi! 👋 Tudo bem? Me conta o que você precisa que eu já te ajudo: troca de óleo, freio, revisão, orçamento ou agendar um horário."}
+];
+function responder(txt){
+  const n=norm(txt);
+  for(const r of regras){ if(r.k.some(k=>n.includes(norm(k)))) return r.r; }
+  return "Boa pergunta! Já anotei aqui e um mecânico confirma pra você em instantes. Enquanto isso, posso te ajudar com <b>preço</b>, <b>horário</b>, <b>agendamento</b> ou <b>onde ficamos</b>. 🔧";
+}
+
+function botResponde(txt){
+  typing(true);
+  setTimeout(()=>{ typing(false); bubble(responder(txt),"bot"); }, 650+Math.random()*500);
+}
+
+// entrada do usuário
+function enviar(txt){
+  txt=txt.trim(); if(!txt) return;
+  bubble(txt,"cli"); botResponde(txt);
+}
+document.getElementById("form").addEventListener("submit",e=>{
+  e.preventDefault(); const i=document.getElementById("in");
+  enviar(i.value); i.value=""; i.focus();
+});
+
+// chips de atalho
+const atalhos=["Troca de óleo 🛢️","Fazer orçamento 🔧","Agendar horário 📅","Onde fica 📍","Garantia"];
+const chips=document.getElementById("chips");
+atalhos.forEach(a=>{ const c=document.createElement("button"); c.className="chip"; c.type="button";
+  c.textContent=a; c.onclick=()=>enviar(a.replace(/\s[^\sA-Za-zÀ-ÿ]+$/,"")); chips.appendChild(c); });
+
+// abertura
+sep("Hoje");
+bubble("Oi! 👋 Sou o atendimento da <b>"+OFICINA.nome+"</b>. Posso te responder <b>na hora, a qualquer horário</b> — inclusive fora do expediente.\n\nMe conta o que você precisa, ou toque em uma opção abaixo. 👇","bot");
+</script>
+
+</body>
+</html>
